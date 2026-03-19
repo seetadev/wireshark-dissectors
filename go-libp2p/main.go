@@ -122,15 +122,16 @@ func runServer() {
 		fmt.Println("server: full addr", full)
 	}
 
-	// Publish a message once a peer connects (signalled via stdin "ready" or a timer)
+	// Publish a message once a peer joins the topic mesh
 	go func() {
-		// Wait for a peer to join the topic mesh
 		for {
 			if len(topic.ListPeers()) > 0 {
 				break
 			}
 			time.Sleep(100 * time.Millisecond)
 		}
+		// Give the remote subscriber time to fully set up
+		time.Sleep(500 * time.Millisecond)
 		data := []byte("Hello from server via GossipSub!")
 		if err := topic.Publish(ctx, data); err != nil {
 			log.Println("server: publish error:", err)
@@ -150,9 +151,9 @@ func runClient() {
 	defer cancel()
 
 	h, err := libp2p.New(
+		libp2p.ListenAddrStrings("/ip4/127.0.0.1/udp/0/quic-v1"),
 		libp2p.Transport(libp2pquic.NewTransport, keyLogOption()),
 		libp2p.DisableRelay(),
-		libp2p.NoListenAddrs,
 	)
 	if err != nil {
 		log.Fatal(err)
@@ -188,6 +189,8 @@ func runClient() {
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
+	// Let the mesh stabilize
+	time.Sleep(500 * time.Millisecond)
 
 	// Publish a message from the client
 	data := []byte("Hello from client via GossipSub!")
@@ -197,24 +200,19 @@ func runClient() {
 	fmt.Printf("client: pubsub published %q\n", data)
 
 	// Wait for the server's message
-	received := false
-	timeout := time.After(5 * time.Second)
-	for !received {
-		select {
-		case <-timeout:
+	recvCtx, recvCancel := context.WithTimeout(ctx, 5*time.Second)
+	defer recvCancel()
+	for {
+		msg, err := sub.Next(recvCtx)
+		if err != nil {
 			fmt.Println("client: pubsub timeout waiting for server message")
-			received = true
-		default:
-			msg, err := sub.Next(ctx)
-			if err != nil {
-				log.Fatal(err)
-			}
-			if msg.ReceivedFrom == h.ID() {
-				continue
-			}
-			fmt.Printf("client: pubsub received %q from %s\n", msg.Data, msg.ReceivedFrom)
-			received = true
+			break
 		}
+		if msg.ReceivedFrom == h.ID() {
+			continue
+		}
+		fmt.Printf("client: pubsub received %q from %s\n", msg.Data, msg.ReceivedFrom)
+		break
 	}
 
 	// Echo exchange (same as before)
