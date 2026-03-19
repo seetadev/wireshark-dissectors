@@ -127,8 +127,14 @@ libp2p._frame_results = {}
 -- Track the highest frame number seen to detect pass resets.
 libp2p._max_frame = 0
 
--- Field extractors (no offset — see comment above)
+-- Field extractors.
+-- quic.stream.offset is only emitted when the QUIC STREAM frame's O bit is set
+-- (offset > 0). When a packet has multiple STREAM frames with mixed offset
+-- presence, the offset array is shorter than id/data arrays. We handle this
+-- by tracking expected offset per stream and using the offset field only for
+-- dedup/placement when available.
 libp2p._f_sid   = Field.new("quic.stream.stream_id")
+libp2p._f_soff  = Field.new("quic.stream.offset")
 libp2p._f_sdata = Field.new("quic.stream_data")
 libp2p._f_conn  = Field.new("quic.connection.number")
 
@@ -172,6 +178,7 @@ function libp2p.process_streams(pinfo)
 
     -- First pass: read fields and accumulate stream data.
     local ids   = { libp2p._f_sid() }
+    local offs  = { libp2p._f_soff() }
     local datas = { libp2p._f_sdata() }
     local conns = { libp2p._f_conn() }
 
@@ -194,32 +201,103 @@ function libp2p.process_streams(pinfo)
         local key = conn_num .. ":" .. tostring(sid)
         local state = libp2p._streams[key]
         if not state then
-            state = { buf = "", protocol = nil, payload_offset = 0 }
+            -- buf: the reassembled stream bytes (1-based string)
+            -- high_water: highest byte offset + 1 we've seen
+            -- contiguous: highest offset from 0 with no gaps (all bytes received)
+            -- segments: sorted list of {start, end} (0-based, exclusive end)
+            --           used to compute contiguous after each insertion
+            state = { buf = "", protocol = nil, payload_offset = 0,
+                      high_water = 0, contiguous = 0, segments = {} }
             libp2p._streams[key] = state
         end
 
-        -- Record previous payload length before appending new data.
+        -- Record previous payload length before placing new data.
         local prev_pl = 0
-        if state.protocol and state.payload_offset > 0 and state.payload_offset <= #state.buf then
-            prev_pl = #state.buf - state.payload_offset + 1
+        if state.protocol and state.payload_offset > 0 and state.contiguous >= state.payload_offset then
+            prev_pl = state.contiguous - state.payload_offset + 1
         end
 
-        -- Append data to the stream buffer (wire order).
-        state.buf = state.buf .. data_fld.range:raw()
+        local new_data = data_fld.range:raw()
+        local data_len = #new_data
 
-        -- Parse multistream-select if not yet done.
-        if not state.protocol then
-            local proto, after = parse_multistream(state.buf)
+        -- Determine the 0-based stream offset for this data.
+        -- When #offs == #ids, they're 1:1 aligned.
+        -- When #offs < #ids, offsets are missing for streams with offset=0.
+        local data_offset
+        if #offs == #ids and offs[i] then
+            data_offset = tonumber(tostring(offs[i].value))
+        elseif #offs == 0 then
+            -- No offsets at all → all are implicit 0, but if we've already
+            -- received data, this must be the next chunk.
+            data_offset = state.high_water
+        else
+            -- Mixed: fall back to placing at high_water.
+            if state.high_water == 0 then
+                data_offset = 0
+            else
+                data_offset = state.high_water
+            end
+        end
+
+        local data_end = data_offset + data_len  -- exclusive, 0-based
+
+        -- Extend buffer if this data goes beyond current size.
+        if data_end > #state.buf then
+            state.buf = state.buf .. string.rep("\0", data_end - #state.buf)
+        end
+
+        -- Place data at the correct position (overwriting zeros or retransmit data).
+        -- 0-based data_offset → 1-based string index = data_offset + 1
+        state.buf = state.buf:sub(1, data_offset)
+                 .. new_data
+                 .. state.buf:sub(data_end + 1)
+
+        if data_end > state.high_water then
+            state.high_water = data_end
+        end
+
+        -- Merge this segment into the sorted segment list to track contiguous range.
+        local seg = state.segments
+        local new_seg = {data_offset, data_end}
+        -- Insert and merge overlapping/adjacent segments.
+        local merged = {}
+        local inserted = false
+        for _, s2 in ipairs(seg) do
+            if new_seg[1] <= s2[2] and new_seg[2] >= s2[1] then
+                -- Overlapping or adjacent — merge.
+                new_seg[1] = math.min(new_seg[1], s2[1])
+                new_seg[2] = math.max(new_seg[2], s2[2])
+            else
+                if not inserted and new_seg[2] < s2[1] then
+                    table.insert(merged, new_seg)
+                    inserted = true
+                end
+                table.insert(merged, s2)
+            end
+        end
+        if not inserted then
+            table.insert(merged, new_seg)
+        end
+        state.segments = merged
+
+        -- Update contiguous: the end of the first segment if it starts at 0.
+        if #merged > 0 and merged[1][1] == 0 then
+            state.contiguous = merged[1][2]
+        end
+
+        -- Parse multistream-select if not yet done (only from contiguous data).
+        if not state.protocol and state.contiguous > 0 then
+            local proto, after = parse_multistream(state.buf:sub(1, state.contiguous))
             if proto then
                 state.protocol = proto
                 state.payload_offset = after
             end
         end
 
-        -- Extract application payload.
+        -- Extract application payload — only up to the contiguous range.
         local payload = nil
-        if state.protocol and state.payload_offset > 0 and state.payload_offset <= #state.buf then
-            payload = state.buf:sub(state.payload_offset)
+        if state.protocol and state.payload_offset > 0 and state.contiguous >= state.payload_offset then
+            payload = state.buf:sub(state.payload_offset, state.contiguous)
         end
 
         local entry = {
