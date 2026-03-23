@@ -1,15 +1,13 @@
 # Wireshark Dissectors
 
 A collection of Wireshark Dissectors for analyzing libp2p and Ethereum
-Consensus Client packet traces.
+Consensus Client packet traces. Only works for QUIC connections.
 
 ![Wireshark Dissector](./.readme/screenshot.png)
 
 ## Usage
 
-Move the Lua files into [Wireshark's Plugin directory](https://www.wireshark.org/docs/wsug_html_chunked/ChPluginFolders.html)
-
-This only works for QUIC based connections.
+Run `make install` or manually move the Lua files into [Wireshark's Plugin directory](https://www.wireshark.org/docs/wsug_html_chunked/ChPluginFolders.html)
 
 When collecting the packet trace, make sure to log the TLS keys used. Refer to
 Wireshark's [documentation](https://wiki.wireshark.org/TLS#tls-decryption) for
@@ -21,6 +19,7 @@ are client agnostic.
 Claude can use `tshark` as well as these dissectors to answer all sorts of questions about a packet trace.
 
 Example:
+
 ```
 ❯ Break down bandwidth usage of prysm.pcap by gossipsub topic
 
@@ -41,7 +40,7 @@ Example:
   ├───────────────────────────────────────┼──────────┼────────┼──────────┼──────────────┤
   │ sync_committee_contribution_and_proof │ 261      │ 89 KB  │ 350 B    │ 1.6%         │
   └───────────────────────────────────────┴──────────┴────────┴──────────┴──────────────┘
-  
+
 ❯ For beacon_aggregate_and_proof, how much traffic is from duplicate messages?
 
 ● 59% of beacon_aggregate_and_proof traffic is duplicates — the same (slot, aggregator_index) pair received from multiple peers.
