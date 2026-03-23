@@ -29,17 +29,6 @@ tshark -r capture.pcap \
 
 Common QUIC ports: 4242 (local test), 9001 (eth-probe), 13001 (Prysm).
 
-## Generating Test Captures
-
-The `go-libp2p/` directory has a test program with echo + gossipsub over QUIC:
-
-```bash
-cd go-libp2p
-SSLKEYLOGFILE=keys.log bash run.sh
-```
-
-This requires a patched go-libp2p in `go-libp2p/go-libp2p-local/` (see CAPTURE.md for the patch).
-
 ## Architecture
 
 ### Dissector Plugin Stack
@@ -74,7 +63,3 @@ QUIC packet → Wireshark QUIC dissector (decrypts with TLS keys)
 - **Offset-based dedup**: Uses `quic.stream.offset` when array lengths match (1:1 with stream IDs), falls back to `high_water` tracking otherwise. Random-access buffer placement handles out-of-order and retransmitted STREAM frames. Only the contiguous byte range from offset 0 is exposed for parsing.
 - **Frame result caching**: `process_streams()` caches per-frame results so multiple dissectors can call it without double-accumulating data.
 - **tshark single-pass only**: The `-2` (two-pass) mode and Wireshark GUI's second pass cannot access `quic.stream_data` from Lua field extractors, so dissection only works in single-pass mode.
-
-## Version Control
-
-This repo uses `jj` (Jujutsu), not `git` directly. Use `jj commit` instead of `git commit`.
