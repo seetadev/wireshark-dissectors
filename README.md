@@ -4,7 +4,7 @@ A collection of Wireshark Dissectors for analyzing libp2p and Ethereum
 Consensus Client packet traces for QUIC connections. We are in progress to extend this initiative by Marco to other transport layer protocols at libp2p.
 
 
-##  Goals of this Repository for extending unified observability
+## Extending unified observability and Experimentation Framework
 
 The long-term vision of this test repository is to become a unified observability and experimentation framework for libp2p and ethp2p-based distributed systems, enabling protocol debugging, interoperability testing, AI-assisted packet analysis, decentralized networking research, and large-scale coordination experiments across Web3, edge AI, Ethereum, IPFS, Filecoin, and next-generation peer-to-peer infrastructure.
 
