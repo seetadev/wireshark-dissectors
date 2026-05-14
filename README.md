@@ -1,14 +1,16 @@
-# Wireshark Dissectors
+# Libp2p and Ethp2p Network Analysis for Wireshark Dissectors
 
 A collection of Wireshark Dissectors for analyzing libp2p and Ethereum
 Consensus Client packet traces. Only works for QUIC connections.
 
+
+##  Goals of this Repository for extending unified observability
+
+The long-term vision of this test repository is to become a unified observability and experimentation framework for libp2p and ethp2p-based distributed systems, enabling protocol debugging, interoperability testing, AI-assisted packet analysis, decentralized networking research, and large-scale coordination experiments across Web3, edge AI, Ethereum, IPFS, Filecoin, and next-generation peer-to-peer infrastructure.
+
+Please visit https://github.com/libp2p/libp2p/discussions/281 for Milestones & Roadmap for libp2p Network Analysis
+
 ![Wireshark Dissector](./.readme/screenshot.png)
-
-
-##  Goals of this Test Repository
-
-The long-term vision of this test repository is to become a unified observability and experimentation framework for libp2p-based distributed systems, enabling protocol debugging, interoperability testing, AI-assisted packet analysis, decentralized networking research, and large-scale coordination experiments across Web3, edge AI, Ethereum, IPFS, Filecoin, and next-generation peer-to-peer infrastructure.
 
 
 ## Usage
