@@ -8,7 +8,7 @@ Consensus Client packet traces for QUIC connections. We are in progress to exten
 
 The long-term vision of this test repository is to become a unified observability and experimentation framework for libp2p and ethp2p-based distributed systems, enabling protocol debugging, interoperability testing, AI-assisted packet analysis, decentralized networking research, and large-scale coordination experiments across Web3, edge AI, Ethereum, IPFS, Filecoin, and next-generation peer-to-peer infrastructure.
 
-Please visit [Milestones & Roadmap](https://github.com/libp2p/libp2p/discussions/281) for extending the testing framework for libp2p and ethp2p Network Analysis
+Please visit [Milestones & Roadmap](https://github.com/libp2p/libp2p/discussions/281) for extending the testing framework for libp2p and ethp2p Network Analysis.
 
 ![Wireshark Dissector](./.readme/screenshot.png)
 
