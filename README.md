@@ -5,6 +5,12 @@ Consensus Client packet traces. Only works for QUIC connections.
 
 ![Wireshark Dissector](./.readme/screenshot.png)
 
+
+##  Goals of this Test Repository
+
+The long-term vision of this test repository is to become a unified observability and experimentation framework for libp2p-based distributed systems, enabling protocol debugging, interoperability testing, AI-assisted packet analysis, decentralized networking research, and large-scale coordination experiments across Web3, edge AI, Ethereum, IPFS, Filecoin, and next-generation peer-to-peer infrastructure.
+
+
 ## Usage
 
 Run `make install` or manually move the Lua files into [Wireshark's Plugin directory](https://www.wireshark.org/docs/wsug_html_chunked/ChPluginFolders.html)
