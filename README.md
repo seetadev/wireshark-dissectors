@@ -1,7 +1,7 @@
 # Libp2p and Ethp2p Network Analysis for Wireshark Dissectors
 
 A collection of Wireshark Dissectors for analyzing libp2p and Ethereum
-Consensus Client packet traces. Only works for QUIC connections.
+Consensus Client packet traces for QUIC connections. We are in progress to extend this initiative by Marco to other transport layer protocols at libp2p.
 
 
 ##  Goals of this Repository for extending unified observability
